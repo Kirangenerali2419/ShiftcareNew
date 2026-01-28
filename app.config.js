@@ -2,16 +2,10 @@ export default {
   expo: {
     name: 'ShiftCare Appointments',
     slug: 'shiftcare-appointments',
-    "newArchEnabled": false,
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/icon.png',
     userInterfaceStyle: 'light',
-    splash: {
-      image: './assets/splash.png',
-      resizeMode: 'contain',
-      backgroundColor: '#ffffff'
-    },
+    "newArchEnabled": false,
     assetBundlePatterns: [
       '**/*'
     ],
@@ -19,14 +13,7 @@ export default {
       supportsTablet: true
     },
     android: {
-      package: "com.anonymous.shiftcareappointments",
-      adaptiveIcon: {
-        foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#FFFFFF'
-      }
-    },
-    web: {
-      favicon: './assets/favicon.png'
+      package: "com.anonymous.shiftcareappointments"
     },
     plugins: [
       [
