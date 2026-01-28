@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,15 +14,8 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { useBookings } from '../context/BookingsContext';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorView } from '../components/ErrorView';
-import { Doctor } from '../types';
-import { SerializedTimeSlot } from '../navigation/AppNavigator';
-
-type RootStackParamList = {
-  DoctorsList: undefined;
-  DoctorDetail: { doctor: Doctor };
-  BookingConfirmation: { doctor: Doctor; slot: SerializedTimeSlot };
-  MyBookings: undefined;
-};
+import { RootStackParamList, Booking } from '../types';
+import { COLORS } from '../constants';
 
 type MyBookingsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -36,7 +29,7 @@ interface Props {
 export const MyBookingsScreen: React.FC<Props> = ({ navigation }) => {
   const { bookings, isLoading, error, cancelBooking } = useBookings();
 
-  const handleCancel = (bookingId: string, doctorName: string, startTime: string) => {
+  const handleCancel = useCallback((bookingId: string, doctorName: string) => {
     Alert.alert(
       'Cancel Appointment',
       `Are you sure you want to cancel your appointment with ${doctorName}?`,
@@ -62,16 +55,57 @@ export const MyBookingsScreen: React.FC<Props> = ({ navigation }) => {
         },
       ]
     );
-  };
+  }, [cancelBooking]);
 
-  const formatBookingDate = (dateString: string, timezone: string): string => {
+  const formatBookingDate = useCallback((dateString: string, timezone: string): string => {
     try {
       const date = parseISO(dateString);
       return formatInTimeZone(date, timezone, 'MMM dd, yyyy h:mm a');
     } catch {
       return dateString;
     }
-  };
+  }, []);
+
+  const handleBackPress = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  const handleBrowseDoctors = useCallback(() => {
+    navigation.navigate('DoctorsList');
+  }, [navigation]);
+
+  const renderBookingItem = useCallback(({ item }: { item: Booking }) => (
+    <View style={styles.bookingCard}>
+      <View style={styles.bookingHeader}>
+        <Text style={styles.doctorName}>{item.doctorName}</Text>
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => handleCancel(item.id, item.doctorName)}
+        >
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.bookingDetail}>
+        {item.dayOfWeek} • {formatBookingDate(item.startTime, item.doctorTimezone)}
+      </Text>
+      <Text style={styles.timezone}>Timezone: {item.doctorTimezone}</Text>
+      <Text style={styles.createdAt}>
+        Booked on {format(parseISO(item.createdAt), 'MMM dd, yyyy')}
+      </Text>
+    </View>
+  ), [handleCancel, formatBookingDate]);
+
+  const renderEmptyComponent = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>No bookings yet</Text>
+      <TouchableOpacity
+        style={styles.browseButton}
+        onPress={handleBrowseDoctors}
+      >
+        <Text style={styles.browseButtonText}>Browse Doctors</Text>
+      </TouchableOpacity>
+    </View>
+  ), [handleBrowseDoctors]);
 
   if (isLoading) {
     return <LoadingSpinner message="Loading bookings..." />;
@@ -84,7 +118,7 @@ export const MyBookingsScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Bookings</Text>
@@ -93,38 +127,9 @@ export const MyBookingsScreen: React.FC<Props> = ({ navigation }) => {
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.bookingCard}>
-            <View style={styles.bookingHeader}>
-              <Text style={styles.doctorName}>{item.doctorName}</Text>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => handleCancel(item.id, item.doctorName, item.startTime)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.bookingDetail}>
-              {item.dayOfWeek} • {formatBookingDate(item.startTime, item.doctorTimezone)}
-            </Text>
-            <Text style={styles.timezone}>Timezone: {item.doctorTimezone}</Text>
-            <Text style={styles.createdAt}>
-              Booked on {format(parseISO(item.createdAt), 'MMM dd, yyyy')}
-            </Text>
-          </View>
-        )}
+        renderItem={renderBookingItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No bookings yet</Text>
-            <TouchableOpacity
-              style={styles.browseButton}
-              onPress={() => navigation.navigate('DoctorsList')}
-            >
-              <Text style={styles.browseButtonText}>Browse Doctors</Text>
-            </TouchableOpacity>
-          </View>
-        }
+        ListEmptyComponent={renderEmptyComponent}
       />
     </SafeAreaView>
   );
@@ -133,28 +138,28 @@ export const MyBookingsScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: COLORS.border,
   },
   backButton: {
     padding: 4,
   },
   backButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: COLORS.primary,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.text.primary,
   },
   placeholder: {
     width: 60,
@@ -163,7 +168,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   bookingCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -182,33 +187,33 @@ const styles = StyleSheet.create({
   doctorName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.text.primary,
     flex: 1,
   },
   cancelButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: COLORS.error,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   cancelButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
     fontSize: 14,
     fontWeight: '600',
   },
   bookingDetail: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.text.primary,
     marginBottom: 4,
   },
   timezone: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginBottom: 4,
   },
   createdAt: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.text.disabled,
     marginTop: 8,
   },
   emptyContainer: {
@@ -219,17 +224,17 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#999',
+    color: COLORS.text.disabled,
     marginBottom: 16,
   },
   browseButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   browseButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -21,6 +21,14 @@ export interface TimeSlot {
   isAvailable: boolean;
 }
 
+export interface SerializedTimeSlot {
+  startTime: string;
+  endTime: string;
+  dayOfWeek: string;
+  timezone: string;
+  isAvailable: boolean;
+}
+
 export interface Booking {
   id: string;
   doctorName: string;
@@ -36,3 +44,10 @@ export interface BookingsState {
   isLoading: boolean;
   error: string | null;
 }
+
+export type RootStackParamList = {
+  DoctorsList: undefined;
+  DoctorDetail: { doctor: Doctor };
+  BookingConfirmation: { doctor: Doctor; slot: SerializedTimeSlot };
+  MyBookings: undefined;
+};

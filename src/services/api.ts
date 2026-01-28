@@ -1,59 +1,72 @@
 import { DoctorAvailability, Doctor } from '../types';
+import { API_CONFIG } from '../constants';
 
-const API_URL = 'https://raw.githubusercontent.com/suyogshiftcare/jsontest/main/available.json';
+class ApiError extends Error {
+  constructor(message: string, public status?: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
-/**
- * Fetches doctor availability data from the API
- * @returns Promise resolving to array of doctor availability entries
- * @throws Error if API request fails
- */
+const createApiUrl = (endpoint: string): string => 
+  `${API_CONFIG.BASE_URL}${endpoint}`;
+
 export const fetchDoctorAvailability = async (): Promise<DoctorAvailability[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+  
   try {
-    const response = await fetch(API_URL);
+    const response = await fetch(createApiUrl(API_CONFIG.ENDPOINTS.AVAILABILITY), {
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      throw new ApiError(`API request failed with status ${response.status}`, response.status);
     }
     
     const data: DoctorAvailability[] = await response.json();
+    
+    if (!Array.isArray(data)) {
+      throw new ApiError('Invalid API response format');
+    }
+    
     return data;
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch doctor availability: ${error.message}`);
+    clearTimeout(timeoutId);
+    
+    if (error instanceof ApiError) {
+      throw error;
     }
-    throw new Error('Failed to fetch doctor availability: Unknown error');
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new ApiError('Request timeout');
+      }
+      throw new ApiError(`Network error: ${error.message}`);
+    }
+    
+    throw new ApiError('Unknown error occurred');
   }
 };
 
-/**
- * Groups availability data by doctor name and creates Doctor objects
- * @param availabilityData Raw availability data from API
- * @returns Array of Doctor objects with unique IDs
- */
 export const groupDoctorsByAvailability = (availabilityData: DoctorAvailability[]): Doctor[] => {
   const doctorMap = new Map<string, DoctorAvailability[]>();
   
-  // Group entries by doctor name
   availabilityData.forEach((entry) => {
     const existing = doctorMap.get(entry.name) || [];
     doctorMap.set(entry.name, [...existing, entry]);
   });
   
-  // Convert to Doctor array with IDs
-  const doctors: Doctor[] = Array.from(doctorMap.entries()).map(([name, availability], index) => ({
+  return Array.from(doctorMap.entries()).map(([name, availability], index) => ({
     id: `doctor-${index + 1}`,
     name,
-    timezone: availability[0].timezone, // All entries for a doctor should have same timezone
+    timezone: availability[0].timezone,
     availability,
   }));
-  
-  return doctors;
 };
 
-/**
- * Fetches and processes doctor data
- * @returns Promise resolving to array of Doctor objects
- */
 export const getDoctors = async (): Promise<Doctor[]> => {
   const availabilityData = await fetchDoctorAvailability();
   return groupDoctorsByAvailability(availabilityData);

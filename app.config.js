@@ -1,28 +1,44 @@
 export default {
   expo: {
-    name: "ShiftCare Appointments",
-    slug: "shiftcare-appointments",
-    version: "1.0.0",
-    orientation: "portrait",
-    userInterfaceStyle: "light",
+    name: 'ShiftCare Appointments',
+    slug: 'shiftcare-appointments',
+    "newArchEnabled": false,
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/icon.png',
+    userInterfaceStyle: 'light',
     splash: {
-      resizeMode: "contain",
-      backgroundColor: "#ffffff"
+      image: './assets/splash.png',
+      resizeMode: 'contain',
+      backgroundColor: '#ffffff'
     },
     assetBundlePatterns: [
-      "**/*"
+      '**/*'
     ],
     ios: {
-      supportsTablet: true,
-      bundleIdentifier: "com.shiftcare.appointments"
+      supportsTablet: true
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: "#ffffff"
-      },
-      package: "com.shiftcare.appointments",
-      permissions: []
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#FFFFFF'
+      }
     },
-    web: {}
+    web: {
+      favicon: './assets/favicon.png'
+    },
+    plugins: [
+      [
+        'expo-build-properties',
+        {
+          android: {
+            newArchEnabled: false
+          },
+          ios: {
+            newArchEnabled: false
+          }
+        }
+      ]
+    ]
   }
 };

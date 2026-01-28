@@ -1,18 +1,19 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { COLORS } from '../constants';
 
 interface LoadingSpinnerProps {
   message?: string;
 }
 
-export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ message = 'Loading...' }) => {
-  return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#007AFF" />
-      <Text style={styles.message}>{message}</Text>
-    </View>
-  );
-};
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
+  message = 'Loading...' 
+}) => (
+  <View style={styles.container}>
+    <ActivityIndicator size="large" color={COLORS.primary} />
+    <Text style={styles.message}>{message}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -24,6 +25,6 @@ const styles = StyleSheet.create({
   message: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    color: COLORS.text.secondary,
   },
 });

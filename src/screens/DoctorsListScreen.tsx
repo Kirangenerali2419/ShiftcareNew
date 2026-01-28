@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,11 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Doctor } from '../types';
+import { Doctor, RootStackParamList } from '../types';
 import { getDoctors } from '../services/api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorView } from '../components/ErrorView';
-import { SerializedTimeSlot } from '../navigation/AppNavigator';
-
-type RootStackParamList = {
-  DoctorsList: undefined;
-  DoctorDetail: { doctor: Doctor };
-  BookingConfirmation: { doctor: Doctor; slot: SerializedTimeSlot };
-  MyBookings: undefined;
-};
+import { COLORS } from '../constants';
 
 type DoctorsListScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -31,36 +24,34 @@ interface Props {
 }
 
 export const DoctorsListScreen: React.FC<Props> = ({ navigation }) => {
-  console.log('[DoctorsListScreen] Component initialized');
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDoctors = async () => {
+  const loadDoctors = useCallback(async () => {
     try {
-      console.log('[DoctorsListScreen] Starting to load doctors...');
       setIsLoading(true);
       setError(null);
       const doctorsData = await getDoctors();
-      console.log('[DoctorsListScreen] Loaded doctors:', doctorsData.length);
       setDoctors(doctorsData);
     } catch (err) {
-      console.error('[DoctorsListScreen] Error loading doctors:', err);
       setError(err instanceof Error ? err.message : 'Failed to load doctors');
     } finally {
       setIsLoading(false);
-      console.log('[DoctorsListScreen] Finished loading doctors');
     }
-  };
-
-  useEffect(() => {
-    console.log('[DoctorsListScreen] useEffect triggered');
-    loadDoctors();
   }, []);
 
-  const handleDoctorPress = (doctor: Doctor) => {
+  useEffect(() => {
+    loadDoctors();
+  }, [loadDoctors]);
+
+  const handleDoctorPress = useCallback((doctor: Doctor) => {
     navigation.navigate('DoctorDetail', { doctor });
-  };
+  }, [navigation]);
+
+  const handleMyBookingsPress = useCallback(() => {
+    navigation.navigate('MyBookings');
+  }, [navigation]);
 
   if (isLoading) {
     return <LoadingSpinner message="Loading doctors..." />;
@@ -76,7 +67,7 @@ export const DoctorsListScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.title}>Available Doctors</Text>
         <TouchableOpacity
           style={styles.bookingsButton}
-          onPress={() => navigation.navigate('MyBookings')}
+          onPress={handleMyBookingsPress}
         >
           <Text style={styles.bookingsButtonText}>My Bookings</Text>
         </TouchableOpacity>
@@ -110,30 +101,30 @@ export const DoctorsListScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: COLORS.border,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text.primary,
   },
   bookingsButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   bookingsButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -141,7 +132,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   doctorCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -154,17 +145,17 @@ const styles = StyleSheet.create({
   doctorName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.text.primary,
     marginBottom: 4,
   },
   doctorTimezone: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginBottom: 8,
   },
   availabilityText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: COLORS.primary,
   },
   emptyContainer: {
     flex: 1,
@@ -174,6 +165,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: COLORS.text.disabled,
   },
 });

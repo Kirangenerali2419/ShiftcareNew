@@ -11,31 +11,28 @@ interface BookingsContextType extends BookingsState {
 
 const BookingsContext = createContext<BookingsContextType | undefined>(undefined);
 
+const generateBookingId = (): string => 
+  `booking-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
 export const BookingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  console.log('[BookingsContext] Initializing BookingsProvider');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
     try {
-      console.log('[BookingsContext] Loading bookings...');
       setIsLoading(true);
       setError(null);
       const storedBookings = await getStoredBookings();
-      console.log('[BookingsContext] Loaded bookings:', storedBookings.length);
       setBookings(storedBookings);
     } catch (err) {
-      console.error('[BookingsContext] Error loading bookings:', err);
       setError(err instanceof Error ? err.message : 'Failed to load bookings');
     } finally {
       setIsLoading(false);
-      console.log('[BookingsContext] Finished loading bookings');
     }
   }, []);
 
   useEffect(() => {
-    console.log('[BookingsContext] useEffect triggered, loading bookings');
     loadBookings();
   }, [loadBookings]);
 
@@ -43,7 +40,6 @@ export const BookingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       setError(null);
       
-      // Check for duplicate booking
       const isDuplicate = bookings.some(
         (b) => b.doctorName === bookingData.doctorName && b.startTime === bookingData.startTime
       );
@@ -54,7 +50,7 @@ export const BookingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       const newBooking: Booking = {
         ...bookingData,
-        id: `booking-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: generateBookingId(),
         createdAt: new Date().toISOString(),
       };
       

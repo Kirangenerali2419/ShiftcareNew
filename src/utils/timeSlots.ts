@@ -1,14 +1,18 @@
-import { format, addMinutes, parse, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { format, addMinutes, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { formatInTimeZone, zonedTimeToUtc } from 'date-fns-tz';
 import { DoctorAvailability, TimeSlot, Booking } from '../types';
+import { TIME_CONFIG } from '../constants';
 
-/**
- * Converts a time string (e.g., " 9:00AM") to a Date object for a given day
- * @param timeString Time string in format " H:MMAM" or " H:MMPM"
- * @param day Date object representing the day
- * @param timezone Timezone string (e.g., "Australia/Sydney")
- * @returns Date object in UTC
- */
+const DAY_MAP: Record<string, number> = {
+  Monday: 0,
+  Tuesday: 1,
+  Wednesday: 2,
+  Thursday: 3,
+  Friday: 4,
+  Saturday: 5,
+  Sunday: 6,
+} as const;
+
 const parseTimeString = (timeString: string, day: Date, timezone: string): Date => {
   const trimmed = timeString.trim();
   const isPM = trimmed.toUpperCase().includes('PM');
@@ -22,41 +26,29 @@ const parseTimeString = (timeString: string, day: Date, timezone: string): Date 
     hour24 = 0;
   }
   
-  // Create date string in the target timezone
   const dateString = format(day, 'yyyy-MM-dd');
   const timeString24 = `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
   const dateTimeString = `${dateString} ${timeString24}`;
   
-  // Parse as if it's in the target timezone, then convert to UTC
   return zonedTimeToUtc(dateTimeString, timezone);
 };
 
-/**
- * Generates 30-minute time slots for a doctor's availability window
- * @param availability Doctor availability entry
- * @param weekStart Start of the week (Monday)
- * @param existingBookings Array of existing bookings to mark slots as unavailable
- * @returns Array of TimeSlot objects
- */
+const isSlotBooked = (booking: Booking, doctorName: string, slotStart: Date): boolean => {
+  const bookingStart = new Date(booking.startTime);
+  return (
+    booking.doctorName === doctorName &&
+    isSameDay(bookingStart, slotStart) &&
+    bookingStart.getTime() === slotStart.getTime()
+  );
+};
+
 export const generateTimeSlots = (
   availability: DoctorAvailability,
   weekStart: Date,
   existingBookings: Booking[] = []
 ): TimeSlot[] => {
-  const dayMap: Record<string, number> = {
-    Monday: 0,
-    Tuesday: 1,
-    Wednesday: 2,
-    Thursday: 3,
-    Friday: 4,
-    Saturday: 5,
-    Sunday: 6,
-  };
-  
-  const dayOffset = dayMap[availability.day_of_week];
-  if (dayOffset === undefined) {
-    return [];
-  }
+  const dayOffset = DAY_MAP[availability.day_of_week];
+  if (dayOffset === undefined) return [];
   
   const targetDay = addDays(weekStart, dayOffset);
   const startTime = parseTimeString(availability.available_at, targetDay, availability.timezone);
@@ -66,17 +58,11 @@ export const generateTimeSlots = (
   let currentTime = startTime;
   
   while (currentTime < endTime) {
-    const slotEndTime = addMinutes(currentTime, 30);
+    const slotEndTime = addMinutes(currentTime, TIME_CONFIG.SLOT_DURATION_MINUTES);
     
-    // Check if this slot conflicts with an existing booking
-    const isBooked = existingBookings.some((booking) => {
-      const bookingStart = new Date(booking.startTime);
-      return (
-        booking.doctorName === availability.name &&
-        isSameDay(bookingStart, currentTime) &&
-        bookingStart.getTime() === currentTime.getTime()
-      );
-    });
+    const isBooked = existingBookings.some((booking) => 
+      isSlotBooked(booking, availability.name, currentTime)
+    );
     
     slots.push({
       startTime: new Date(currentTime),
@@ -92,47 +78,27 @@ export const generateTimeSlots = (
   return slots;
 };
 
-/**
- * Generates all time slots for a doctor across their availability
- * @param doctor Doctor object with availability data
- * @param weekStart Start of the week (Monday)
- * @param existingBookings Array of existing bookings
- * @returns Array of TimeSlot objects grouped by day
- */
 export const getAllDoctorTimeSlots = (
   doctor: { name: string; timezone: string; availability: DoctorAvailability[] },
   weekStart: Date,
   existingBookings: Booking[] = []
 ): Record<string, TimeSlot[]> => {
-  const slotsByDay: Record<string, TimeSlot[]> = {};
-  
-  doctor.availability.forEach((avail) => {
+  return doctor.availability.reduce((acc, avail) => {
     const slots = generateTimeSlots(avail, weekStart, existingBookings);
     if (slots.length > 0) {
-      slotsByDay[avail.day_of_week] = slots;
+      acc[avail.day_of_week] = slots;
     }
-  });
-  
-  return slotsByDay;
+    return acc;
+  }, {} as Record<string, TimeSlot[]>);
 };
 
-/**
- * Formats a time slot for display
- * @param slot TimeSlot object
- * @param timezone Timezone string
- * @returns Formatted time string (e.g., "9:00 AM - 9:30 AM")
- */
 export const formatTimeSlot = (slot: TimeSlot, timezone: string): string => {
   const start = formatInTimeZone(slot.startTime, timezone, 'h:mm a');
   const end = formatInTimeZone(slot.endTime, timezone, 'h:mm a');
   return `${start} - ${end}`;
 };
 
-/**
- * Gets the start of the current week (Monday)
- * @returns Date object representing Monday of current week
- */
 export const getWeekStart = (): Date => {
   const now = new Date();
-  return startOfWeek(now, { weekStartsOn: 1 }); // 1 = Monday
+  return startOfWeek(now, { weekStartsOn: TIME_CONFIG.WEEK_START_DAY });
 };

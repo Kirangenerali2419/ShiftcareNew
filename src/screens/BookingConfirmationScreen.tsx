@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,17 +9,10 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { Doctor, TimeSlot } from '../types';
+import { Doctor, TimeSlot, RootStackParamList, SerializedTimeSlot } from '../types';
 import { formatTimeSlot } from '../utils/timeSlots';
 import { useBookings } from '../context/BookingsContext';
-import { SerializedTimeSlot } from '../navigation/AppNavigator';
-
-type RootStackParamList = {
-  DoctorsList: undefined;
-  DoctorDetail: { doctor: Doctor };
-  BookingConfirmation: { doctor: Doctor; slot: SerializedTimeSlot };
-  MyBookings: undefined;
-};
+import { COLORS } from '../constants';
 
 type BookingConfirmationScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -37,32 +30,17 @@ interface Props {
 }
 
 export const BookingConfirmationScreen: React.FC<Props> = ({ navigation, route }) => {
-  console.log('[BookingConfirmationScreen] Component initialized');
-  console.log('[BookingConfirmationScreen] Route params:', route.params);
   const { doctor, slot: serializedSlot } = route.params;
-  console.log('[BookingConfirmationScreen] Doctor:', doctor?.name);
-  console.log('[BookingConfirmationScreen] Serialized slot:', serializedSlot);
   const { addBooking } = useBookings();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Convert serialized slot back to TimeSlot with Date objects
-  const slot: TimeSlot = useMemo(() => {
-    console.log('[BookingConfirmationScreen] Converting serialized slot to TimeSlot');
-    try {
-      const converted = {
-        ...serializedSlot,
-        startTime: new Date(serializedSlot.startTime),
-        endTime: new Date(serializedSlot.endTime),
-      };
-      console.log('[BookingConfirmationScreen] Converted slot:', converted);
-      return converted;
-    } catch (error) {
-      console.error('[BookingConfirmationScreen] Error converting slot:', error);
-      throw error;
-    }
-  }, [serializedSlot]);
+  const slot: TimeSlot = useMemo(() => ({
+    ...serializedSlot,
+    startTime: new Date(serializedSlot.startTime),
+    endTime: new Date(serializedSlot.endTime),
+  }), [serializedSlot]);
 
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     try {
       setIsSubmitting(true);
       
@@ -80,9 +58,7 @@ export const BookingConfirmationScreen: React.FC<Props> = ({ navigation, route }
         [
           {
             text: 'View My Bookings',
-            onPress: () => {
-              navigation.navigate('MyBookings');
-            },
+            onPress: () => navigation.navigate('MyBookings'),
           },
         ],
         { cancelable: false }
@@ -95,11 +71,11 @@ export const BookingConfirmationScreen: React.FC<Props> = ({ navigation, route }
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [addBooking, doctor, slot, navigation]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     navigation.goBack();
-  };
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -153,28 +129,28 @@ export const BookingConfirmationScreen: React.FC<Props> = ({ navigation, route }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: COLORS.border,
   },
   backButton: {
     padding: 4,
   },
   backButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: COLORS.primary,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.text.primary,
   },
   placeholder: {
     width: 60,
@@ -183,20 +159,20 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
   },
   label: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginBottom: 4,
   },
   value: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.text.primary,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -210,21 +186,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: COLORS.border,
   },
   confirmButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   cancelButtonText: {
-    color: '#333',
+    color: COLORS.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   confirmButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
     fontSize: 16,
     fontWeight: '600',
   },
