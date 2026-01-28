@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "ShiftCare Appointments",
+    "slug": "shiftcare-appointments",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "newArchEnabled": false
+    },
+    "android": {
+      "package": "com.anonymous.shiftcareappointments",
+      "newArchEnabled": false
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": false,
+            "enableHermes": false
+          },
+          "ios": {
+            "newArchEnabled": false
+          }
+        }
+      ]
+    ]
+  }
+}
